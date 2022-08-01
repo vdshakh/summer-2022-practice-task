@@ -106,16 +106,16 @@ func FindTrains(departureStation, arrivalStation, criteria string) (Trains, erro
 		return nil, fmt.Errorf("validator failed: %w", err)
 	}
 
-	affordableTrains, err := SelectTrains(departureStation, arrivalStation)
+	availableTrains, err := SelectTrains(departureStation, arrivalStation)
 	if err != nil {
 		return nil, fmt.Errorf("selectTrains failed: %w", err)
 	}
 
-	if len(affordableTrains) <= 1 {
-		return affordableTrains, nil
+	if len(availableTrains) <= 1 {
+		return availableTrains, nil
 	}
 
-	sortedTrains := SortTrains(affordableTrains, criteria)
+	sortedTrains := SortTrains(availableTrains, criteria)
 
 	if len(sortedTrains) >= 3 {
 		topTrains := SeparateTopTrains(sortedTrains)
@@ -223,7 +223,7 @@ func importInfo() (Trains, error) {
 }
 
 func SelectTrains(departureStation, arrivalStation string) (Trains, error) {
-	var affordableTrains Trains
+	var availableTrains Trains
 
 	trainSchedule, err := importInfo()
 	if err != nil {
@@ -235,71 +235,71 @@ func SelectTrains(departureStation, arrivalStation string) (Trains, error) {
 
 	for _, v := range trainSchedule {
 		if v.DepartureStationID == departure && v.ArrivalStationID == arrival {
-			affordableTrains = append(affordableTrains, v)
+			availableTrains = append(availableTrains, v)
 		}
 	}
 
-	return affordableTrains, nil
+	return availableTrains, nil
 }
 
-func SortTrains(affordableTrains Trains, criteria string) Trains {
+func SortTrains(availableTrains Trains, criteria string) Trains {
 	var sortedTrains Trains
 
 	switch criteria {
 	case "price":
-		sortedTrains = SortTrainsByPrice(affordableTrains)
+		sortedTrains = SortTrainsByPrice(availableTrains)
 
 	case "arrival-time":
-		sortedTrains = SortTrainsByArrival(affordableTrains)
+		sortedTrains = SortTrainsByArrival(availableTrains)
 
 	default: // aka "departure-time"
-		sortedTrains = SortTrainsByDeparture(affordableTrains)
+		sortedTrains = SortTrainsByDeparture(availableTrains)
 	}
 
 	return sortedTrains
 }
 
-func SortTrainsByPrice(affordableTrains Trains) Trains {
-	sort.Slice(affordableTrains, func(i, j int) bool {
-		if affordableTrains[i].Price != affordableTrains[j].Price {
-			return affordableTrains[i].Price < affordableTrains[j].Price
+func SortTrainsByPrice(availableTrains Trains) Trains {
+	sort.Slice(availableTrains, func(i, j int) bool {
+		if availableTrains[i].Price != availableTrains[j].Price {
+			return availableTrains[i].Price < availableTrains[j].Price
 		}
 
-		return affordableTrains[i].Price < affordableTrains[j].Price
+		return availableTrains[i].Price < availableTrains[j].Price
 	})
 
-	return affordableTrains
+	return availableTrains
 }
 
-func SortTrainsByArrival(affordableTrains Trains) Trains {
-	sort.Slice(affordableTrains, func(i, j int) bool {
-		if affordableTrains[i].ArrivalTime != affordableTrains[j].ArrivalTime {
-			return affordableTrains[i].ArrivalTime.Before(affordableTrains[j].ArrivalTime)
+func SortTrainsByArrival(availableTrains Trains) Trains {
+	sort.Slice(availableTrains, func(i, j int) bool {
+		if availableTrains[i].ArrivalTime != availableTrains[j].ArrivalTime {
+			return availableTrains[i].ArrivalTime.Before(availableTrains[j].ArrivalTime)
 		}
 
-		return affordableTrains[i].ArrivalTime.Before(affordableTrains[j].ArrivalTime)
+		return availableTrains[i].ArrivalTime.Before(availableTrains[j].ArrivalTime)
 	})
 
-	return affordableTrains
+	return availableTrains
 }
 
-func SortTrainsByDeparture(affordableTrains Trains) Trains {
-	sort.Slice(affordableTrains, func(i, j int) bool {
-		if affordableTrains[i].DepartureTime != affordableTrains[j].DepartureTime {
-			return affordableTrains[i].DepartureTime.Before(affordableTrains[j].DepartureTime)
+func SortTrainsByDeparture(availableTrains Trains) Trains {
+	sort.Slice(availableTrains, func(i, j int) bool {
+		if availableTrains[i].DepartureTime != availableTrains[j].DepartureTime {
+			return availableTrains[i].DepartureTime.Before(availableTrains[j].DepartureTime)
 		}
 
-		return affordableTrains[i].DepartureTime.Before(affordableTrains[j].DepartureTime)
+		return availableTrains[i].DepartureTime.Before(availableTrains[j].DepartureTime)
 	})
 
-	return affordableTrains
+	return availableTrains
 }
 
-func SeparateTopTrains(affordableTrains Trains) Trains {
+func SeparateTopTrains(availableTrains Trains) Trains {
 	var topTrains Trains
 
 	for i := 0; i < 3; i++ {
-		topTrains = append(topTrains, affordableTrains[i])
+		topTrains = append(topTrains, availableTrains[i])
 	}
 
 	return topTrains
