@@ -69,8 +69,8 @@ func (t *Train) UnmarshalJSON(data []byte) error {
 func (t Train) String() string {
 	output, _ := fmt.Printf("TrainID \t DepartureStationID \t\t ArrivalStationID \t Price \t\t\t "+
 		"ArrivalTime \t\t DepartureTime \n %v\t\t %v\t\t\t\t %v\t\t\t %v\t\t\t %v\t\t %v", t.TrainID,
-		t.DepartureStationID, t.ArrivalStationID, t.Price, t.ArrivalTime.Format("15:04:05"),
-		t.DepartureTime.Format("15:04:05"))
+		t.DepartureStationID, t.ArrivalStationID, t.Price, t.ArrivalTime.Format(timeLayout),
+		t.DepartureTime.Format(timeLayout))
 
 	return string(output)
 }
@@ -158,7 +158,6 @@ func readInput() (string, error) {
 	}
 
 	userInput = strings.TrimSuffix(userInput, "\n") // remove the delimeter from the string
-	fmt.Println(input)
 
 	return userInput, nil
 }
