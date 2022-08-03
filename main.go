@@ -94,7 +94,9 @@ var validCriteria = CriteriaMap{
 }
 
 func main() {
-	depStation, arrStation, criteria := input()
+	depStation := input("departureStation")
+	arrStation := input("arrivalStation")
+	criteria := input("criteria")
 
 	result, err := FindTrains(depStation, arrStation, criteria)
 	if err != nil {
@@ -130,25 +132,15 @@ func FindTrains(departureStation, arrivalStation, criteria string) (Trains, erro
 	return sortedTrains, nil
 }
 
-func input() (depStation, arrStation, criteria string) {
+func input(parameter string) (value string) {
 	var err error
 
-	fmt.Print("Enter Departure Station: ")
-	if depStation, err = readInput(); err != nil {
-		fmt.Printf("\nreadInput for departureStation failed: %v", err)
+	fmt.Printf("Enter %v: ", parameter)
+	if value, err = readInput(); err != nil {
+		fmt.Printf("\nreadInput for %v failed: %v", parameter, err)
 	}
 
-	fmt.Print("Enter Arrival Station: ")
-	if arrStation, err = readInput(); err != nil {
-		fmt.Printf("\nreadInput for arrivalStation failed: %v", err)
-	}
-
-	fmt.Print("Enter Criteria: ")
-	if criteria, err = readInput(); err != nil {
-		fmt.Printf("\nreadInput for criteria failed: %v", err)
-	}
-
-	return depStation, arrStation, criteria
+	return value
 }
 
 func readInput() (string, error) {
