@@ -15,6 +15,9 @@ import (
 )
 
 const timeLayout = "15:04:05"
+const maxNumberTrains = 3
+const naturalNumberCondition = 0
+const sortCondition = 1
 
 type CriteriaMap map[string]struct{}
 
@@ -67,12 +70,12 @@ func (t *Train) UnmarshalJSON(data []byte) error {
 
 // String returns the train in the custom format
 func (t Train) String() string {
-	output, _ := fmt.Printf("TrainID \t DepartureStationID \t\t ArrivalStationID \t Price \t\t\t "+
+	output := fmt.Sprintf("TrainID \t DepartureStationID \t\t ArrivalStationID \t Price \t\t\t "+
 		"ArrivalTime \t\t DepartureTime \n %v\t\t %v\t\t\t\t %v\t\t\t %v\t\t\t %v\t\t %v", t.TrainID,
 		t.DepartureStationID, t.ArrivalStationID, t.Price, t.ArrivalTime.Format(timeLayout),
 		t.DepartureTime.Format(timeLayout))
 
-	return string(output)
+	return output
 }
 
 var (
@@ -80,7 +83,7 @@ var (
 	emptyDepartureErr    = errors.New("empty departure station")
 	emptyArrivalErr      = errors.New("empty arrival station")
 	badArrivalInputErr   = errors.New("bad arrival station input")
-	badDepartureInputErr = errors.New("bad arrival departure input")
+	badDepartureInputErr = errors.New("bad departure station input")
 )
 
 var validCriteria = CriteriaMap{
@@ -94,7 +97,7 @@ func main() {
 
 	result, err := FindTrains(depStation, arrStation, criteria)
 	if err != nil {
-		fmt.Printf("\nfindTrains failed: %w", err)
+		fmt.Printf("\nfindTrains failed: %v", err)
 	}
 
 	PrintTrains(result)
@@ -103,7 +106,7 @@ func main() {
 func FindTrains(departureStation, arrivalStation, criteria string) (Trains, error) {
 	err := validator(departureStation, arrivalStation, criteria)
 	if err != nil {
-		return nil, fmt.Errorf("validator failed: %w", err)
+		return nil, err
 	}
 
 	availableTrains, err := SelectTrains(departureStation, arrivalStation)
@@ -111,13 +114,13 @@ func FindTrains(departureStation, arrivalStation, criteria string) (Trains, erro
 		return nil, fmt.Errorf("selectTrains failed: %w", err)
 	}
 
-	if len(availableTrains) <= 1 {
+	if len(availableTrains) < sortCondition {
 		return availableTrains, nil
 	}
 
 	sortedTrains := SortTrains(availableTrains, criteria)
 
-	if len(sortedTrains) >= 3 {
+	if len(sortedTrains) >= maxNumberTrains {
 		topTrains := SeparateTopTrains(sortedTrains)
 
 		return topTrains, nil
@@ -127,22 +130,21 @@ func FindTrains(departureStation, arrivalStation, criteria string) (Trains, erro
 }
 
 func input() (depStation, arrStation, criteria string) {
+	var err error
+
 	fmt.Print("Enter Departure Station: ")
-	depStation, err := readInput()
-	if err != nil {
-		fmt.Printf("\nreadInput for departureStation failed: %w", err)
+	if depStation, err = readInput(); err != nil {
+		fmt.Errorf("\nreadInput for departureStation failed: %w", err)
 	}
 
 	fmt.Print("Enter Arrival Station: ")
-	arrStation, err = readInput()
-	if err != nil {
-		fmt.Printf("\nreadInput for arrivalStation failed: %w", err)
+	if arrStation, err = readInput(); err != nil {
+		fmt.Errorf("\nreadInput for arrivalStation failed: %w", err)
 	}
 
 	fmt.Print("Enter Criteria: ")
-	criteria, err = readInput()
-	if err != nil {
-		fmt.Printf("\nreadInput for criteria failed: %w", err)
+	if criteria, err = readInput(); err != nil {
+		fmt.Errorf("\nreadInput for criteria failed: %w", err)
 	}
 
 	return depStation, arrStation, criteria
@@ -168,7 +170,7 @@ func validator(departureStation, arrivalStation, criteria string) error {
 	}
 
 	if err := validateEmpty(arrivalStation); err != nil {
-		return emptyDepartureErr
+		return emptyArrivalErr
 	}
 
 	if err := validateIsNaturalNumber(departureStation); err != nil {
@@ -187,7 +189,7 @@ func validator(departureStation, arrivalStation, criteria string) error {
 }
 
 func validateEmpty(s string) error {
-	if s == "" {
+	if len(s) == 0 {
 		return fmt.Errorf("value of input is empty")
 	}
 
@@ -197,7 +199,7 @@ func validateEmpty(s string) error {
 func validateIsNaturalNumber(s string) error {
 	value, _ := strconv.Atoi(s)
 
-	if value <= 0 {
+	if value <= naturalNumberCondition {
 		return fmt.Errorf("value is not a natural number")
 	}
 
@@ -206,11 +208,11 @@ func validateIsNaturalNumber(s string) error {
 
 func importInfo() (Trains, error) {
 	jsonFile, err := os.Open("data.json")
+	defer jsonFile.Close()
+
 	if err != nil {
 		return nil, fmt.Errorf("os.Open returns an error: %v", err)
 	}
-
-	defer jsonFile.Close()
 
 	byteValue, _ := ioutil.ReadAll(jsonFile)
 
@@ -260,7 +262,7 @@ func SortTrains(availableTrains Trains, criteria string) Trains {
 }
 
 func SortTrainsByPrice(availableTrains Trains) Trains {
-	sort.Slice(availableTrains, func(i, j int) bool {
+	sort.SliceStable(availableTrains, func(i, j int) bool {
 		if availableTrains[i].Price != availableTrains[j].Price {
 			return availableTrains[i].Price < availableTrains[j].Price
 		}
@@ -272,7 +274,7 @@ func SortTrainsByPrice(availableTrains Trains) Trains {
 }
 
 func SortTrainsByArrival(availableTrains Trains) Trains {
-	sort.Slice(availableTrains, func(i, j int) bool {
+	sort.SliceStable(availableTrains, func(i, j int) bool {
 		if availableTrains[i].ArrivalTime != availableTrains[j].ArrivalTime {
 			return availableTrains[i].ArrivalTime.Before(availableTrains[j].ArrivalTime)
 		}
@@ -284,7 +286,7 @@ func SortTrainsByArrival(availableTrains Trains) Trains {
 }
 
 func SortTrainsByDeparture(availableTrains Trains) Trains {
-	sort.Slice(availableTrains, func(i, j int) bool {
+	sort.SliceStable(availableTrains, func(i, j int) bool {
 		if availableTrains[i].DepartureTime != availableTrains[j].DepartureTime {
 			return availableTrains[i].DepartureTime.Before(availableTrains[j].DepartureTime)
 		}
