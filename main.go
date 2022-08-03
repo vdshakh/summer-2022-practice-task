@@ -14,6 +14,7 @@ import (
 	"time"
 )
 
+const fileName = "data.json"
 const timeLayout = "15:04:05"
 const maxNumberTrains = 3
 const naturalNumberCondition = 0
@@ -134,17 +135,17 @@ func input() (depStation, arrStation, criteria string) {
 
 	fmt.Print("Enter Departure Station: ")
 	if depStation, err = readInput(); err != nil {
-		fmt.Errorf("\nreadInput for departureStation failed: %w", err)
+		fmt.Printf("\nreadInput for departureStation failed: %v", err)
 	}
 
 	fmt.Print("Enter Arrival Station: ")
 	if arrStation, err = readInput(); err != nil {
-		fmt.Errorf("\nreadInput for arrivalStation failed: %w", err)
+		fmt.Printf("\nreadInput for arrivalStation failed: %v", err)
 	}
 
 	fmt.Print("Enter Criteria: ")
 	if criteria, err = readInput(); err != nil {
-		fmt.Errorf("\nreadInput for criteria failed: %w", err)
+		fmt.Printf("\nreadInput for criteria failed: %v", err)
 	}
 
 	return depStation, arrStation, criteria
@@ -189,7 +190,7 @@ func validator(departureStation, arrivalStation, criteria string) error {
 }
 
 func validateEmpty(s string) error {
-	if len(s) == 0 {
+	if len(s) == 0 { // if len = 0 then string is empty
 		return fmt.Errorf("value of input is empty")
 	}
 
@@ -207,12 +208,12 @@ func validateIsNaturalNumber(s string) error {
 }
 
 func importInfo() (Trains, error) {
-	jsonFile, err := os.Open("data.json")
-	defer jsonFile.Close()
-
+	jsonFile, err := os.Open(fileName)
 	if err != nil {
 		return nil, fmt.Errorf("os.Open returns an error: %v", err)
 	}
+
+	defer jsonFile.Close()
 
 	byteValue, _ := ioutil.ReadAll(jsonFile)
 
@@ -263,10 +264,6 @@ func SortTrains(availableTrains Trains, criteria string) Trains {
 
 func SortTrainsByPrice(availableTrains Trains) Trains {
 	sort.SliceStable(availableTrains, func(i, j int) bool {
-		if availableTrains[i].Price != availableTrains[j].Price {
-			return availableTrains[i].Price < availableTrains[j].Price
-		}
-
 		return availableTrains[i].Price < availableTrains[j].Price
 	})
 
@@ -275,10 +272,6 @@ func SortTrainsByPrice(availableTrains Trains) Trains {
 
 func SortTrainsByArrival(availableTrains Trains) Trains {
 	sort.SliceStable(availableTrains, func(i, j int) bool {
-		if availableTrains[i].ArrivalTime != availableTrains[j].ArrivalTime {
-			return availableTrains[i].ArrivalTime.Before(availableTrains[j].ArrivalTime)
-		}
-
 		return availableTrains[i].ArrivalTime.Before(availableTrains[j].ArrivalTime)
 	})
 
@@ -287,10 +280,6 @@ func SortTrainsByArrival(availableTrains Trains) Trains {
 
 func SortTrainsByDeparture(availableTrains Trains) Trains {
 	sort.SliceStable(availableTrains, func(i, j int) bool {
-		if availableTrains[i].DepartureTime != availableTrains[j].DepartureTime {
-			return availableTrains[i].DepartureTime.Before(availableTrains[j].DepartureTime)
-		}
-
 		return availableTrains[i].DepartureTime.Before(availableTrains[j].DepartureTime)
 	})
 
