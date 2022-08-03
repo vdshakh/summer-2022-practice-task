@@ -124,9 +124,7 @@ func FindTrains(departureStation, arrivalStation, criteria string) (Trains, erro
 	sortedTrains := SortTrains(availableTrains, criteria)
 
 	if len(sortedTrains) >= maxNumberTrains {
-		topTrains := SeparateTopTrains(sortedTrains)
-
-		return topTrains, nil
+		sortedTrains = sortedTrains[:maxNumberTrains]
 	}
 
 	return sortedTrains, nil
@@ -276,16 +274,6 @@ func SortTrainsByDeparture(availableTrains Trains) Trains {
 	})
 
 	return availableTrains
-}
-
-func SeparateTopTrains(availableTrains Trains) Trains {
-	var topTrains Trains
-
-	for i := 0; i < 3; i++ {
-		topTrains = append(topTrains, availableTrains[i])
-	}
-
-	return topTrains
 }
 
 func PrintTrains(trains Trains) {
