@@ -14,28 +14,33 @@ import (
 	"time"
 )
 
-const fileName = "data.json"
-const timeLayout = "15:04:05"
-const maxNumberTrains = 3
-const naturalNumberCondition = 0
-const sortCondition = 1
+const (
+	fileName   = "data.json"
+	timeLayout = "15:04:05"
+)
 
-type CriteriaMap map[string]struct{}
+const (
+	maxNumberTrainsCondition = 3
+	naturalNumberCondition   = 0
+	sortCondition            = 1
+)
 
-type Trains []Train
+type сriteriaMap map[string]struct{}
 
-type CustomTime time.Time
+type trains []train
+
+type customTime time.Time
 
 // UnmarshalJSON Parses the json string in the custom format
-func (ct *CustomTime) UnmarshalJSON(b []byte) (err error) {
+func (ct *customTime) UnmarshalJSON(b []byte) (err error) {
 	s := strings.Trim(string(b), `"`)
 	nt, err := time.Parse(timeLayout, s)
-	*ct = CustomTime(nt)
+	*ct = customTime(nt)
 
 	return
 }
 
-type Train struct {
+type train struct {
 	TrainID            int       `json:"trainId"`
 	DepartureStationID int       `json:"departureStationId"`
 	ArrivalStationID   int       `json:"arrivalStationId"`
@@ -44,14 +49,14 @@ type Train struct {
 	DepartureTime      time.Time `json:"departureTime"`
 }
 
-func (t *Train) UnmarshalJSON(data []byte) error {
-	var aux struct {
+func (t *train) UnmarshalJSON(data []byte) error {
+	var aux struct { //aux means auxiliary
 		TrainID            int
 		DepartureStationID int
 		ArrivalStationID   int
 		Price              float32
-		ArrivalTime        CustomTime
-		DepartureTime      CustomTime
+		ArrivalTime        customTime
+		DepartureTime      customTime
 	}
 
 	dec := json.NewDecoder(bytes.NewReader(data))
@@ -70,7 +75,7 @@ func (t *Train) UnmarshalJSON(data []byte) error {
 }
 
 // String returns the train in the custom format
-func (t Train) String() string {
+func (t train) String() string {
 	output := fmt.Sprintf("TrainID \t DepartureStationID \t\t ArrivalStationID \t Price \t\t\t "+
 		"ArrivalTime \t\t DepartureTime \n %v\t\t %v\t\t\t\t %v\t\t\t %v\t\t\t %v\t\t %v", t.TrainID,
 		t.DepartureStationID, t.ArrivalStationID, t.Price, t.ArrivalTime.Format(timeLayout),
@@ -87,7 +92,7 @@ var (
 	badDepartureInputErr = errors.New("bad departure station input")
 )
 
-var validCriteria = CriteriaMap{
+var validCriteria = сriteriaMap{
 	"price":          {},
 	"arrival-time":   {},
 	"departure-time": {},
@@ -103,16 +108,19 @@ func main() {
 		fmt.Printf("\nfindTrains failed: %v", err)
 	}
 
-	PrintTrains(result)
+	if len(result) > naturalNumberCondition {
+		printTrains(result)
+	} else {
+		fmt.Printf("\ncan't find at least one train")
+	}
 }
 
-func FindTrains(departureStation, arrivalStation, criteria string) (Trains, error) {
-	err := validator(departureStation, arrivalStation, criteria)
-	if err != nil {
+func FindTrains(departureStation, arrivalStation, criteria string) (trains, error) {
+	if err := validator(departureStation, arrivalStation, criteria); err != nil {
 		return nil, err
 	}
 
-	availableTrains, err := SelectTrains(departureStation, arrivalStation)
+	availableTrains, err := selectTrains(departureStation, arrivalStation)
 	if err != nil {
 		return nil, fmt.Errorf("selectTrains failed: %w", err)
 	}
@@ -121,10 +129,10 @@ func FindTrains(departureStation, arrivalStation, criteria string) (Trains, erro
 		return availableTrains, nil
 	}
 
-	sortedTrains := SortTrains(availableTrains, criteria)
+	sortedTrains := sortTrains(availableTrains, criteria)
 
-	if len(sortedTrains) >= maxNumberTrains {
-		sortedTrains = sortedTrains[:maxNumberTrains]
+	if len(sortedTrains) >= maxNumberTrainsCondition {
+		sortedTrains = sortedTrains[:maxNumberTrainsCondition]
 	}
 
 	return sortedTrains, nil
@@ -136,6 +144,8 @@ func input(parameter string) (value string) {
 	fmt.Printf("Enter %v: ", parameter)
 	if value, err = readInput(); err != nil {
 		fmt.Printf("\nreadInput for %v failed: %v", parameter, err)
+
+		return ""
 	}
 
 	return value
@@ -150,9 +160,7 @@ func readInput() (string, error) {
 		return "", err
 	}
 
-	userInput = strings.TrimSuffix(userInput, "\n") // remove the delimeter from the string
-
-	return userInput, nil
+	return strings.TrimSuffix(userInput, "\n"), nil // remove the delimeter from the string
 }
 
 func validator(departureStation, arrivalStation, criteria string) error {
@@ -188,7 +196,10 @@ func validateEmpty(s string) error {
 }
 
 func validateIsNaturalNumber(s string) error {
-	value, _ := strconv.Atoi(s)
+	value, err := strconv.Atoi(s)
+	if err != nil {
+		return fmt.Errorf("can't convert value to int: %w", err)
+	}
 
 	if value <= naturalNumberCondition {
 		return fmt.Errorf("value is not a natural number")
@@ -197,7 +208,7 @@ func validateIsNaturalNumber(s string) error {
 	return nil
 }
 
-func importInfo() (Trains, error) {
+func importInfo() (trains, error) {
 	jsonFile, err := os.Open(fileName)
 	if err != nil {
 		return nil, fmt.Errorf("os.Open returns an error: %v", err)
@@ -207,24 +218,31 @@ func importInfo() (Trains, error) {
 
 	byteValue, _ := ioutil.ReadAll(jsonFile)
 
-	var trainSchedule []Train
-	if err = json.Unmarshal(byteValue, &trainSchedule); err != nil {
+	var trainSchedule []train
+	if err := json.Unmarshal(byteValue, &trainSchedule); err != nil {
 		return nil, fmt.Errorf("error during Unmarshal: %v", err)
 	}
 
 	return trainSchedule, nil
 }
 
-func SelectTrains(departureStation, arrivalStation string) (Trains, error) {
-	var availableTrains Trains
-
+func selectTrains(departureStation, arrivalStation string) (trains, error) {
 	trainSchedule, err := importInfo()
 	if err != nil {
 		return nil, fmt.Errorf("importInfo failed: %w", err)
 	}
 
-	departure, _ := strconv.Atoi(departureStation)
-	arrival, _ := strconv.Atoi(arrivalStation)
+	departure, err := strconv.Atoi(departureStation)
+	if err != nil {
+		return nil, fmt.Errorf("can't convert departureStation to int: %w", err)
+	}
+
+	arrival, err := strconv.Atoi(arrivalStation)
+	if err != nil {
+		return nil, fmt.Errorf("can't convert arrivalStation to int: %w", err)
+	}
+
+	var availableTrains trains
 
 	for _, v := range trainSchedule {
 		if v.DepartureStationID == departure && v.ArrivalStationID == arrival {
@@ -235,24 +253,26 @@ func SelectTrains(departureStation, arrivalStation string) (Trains, error) {
 	return availableTrains, nil
 }
 
-func SortTrains(availableTrains Trains, criteria string) Trains {
-	var sortedTrains Trains
+func sortTrains(availableTrains trains, criteria string) trains {
+	var sortedTrains trains
 
 	switch criteria {
 	case "price":
-		sortedTrains = SortTrainsByPrice(availableTrains)
+		sortedTrains = sortTrainsByPrice(availableTrains)
 
 	case "arrival-time":
-		sortedTrains = SortTrainsByArrival(availableTrains)
+		sortedTrains = sortTrainsByArrival(availableTrains)
 
-	default: // aka "departure-time"
-		sortedTrains = SortTrainsByDeparture(availableTrains)
+	case "departure-time":
+		sortedTrains = sortTrainsByDeparture(availableTrains)
 	}
+
+	//default operator is useless here because we had validator func before
 
 	return sortedTrains
 }
 
-func SortTrainsByPrice(availableTrains Trains) Trains {
+func sortTrainsByPrice(availableTrains trains) trains {
 	sort.SliceStable(availableTrains, func(i, j int) bool {
 		return availableTrains[i].Price < availableTrains[j].Price
 	})
@@ -260,7 +280,7 @@ func SortTrainsByPrice(availableTrains Trains) Trains {
 	return availableTrains
 }
 
-func SortTrainsByArrival(availableTrains Trains) Trains {
+func sortTrainsByArrival(availableTrains trains) trains {
 	sort.SliceStable(availableTrains, func(i, j int) bool {
 		return availableTrains[i].ArrivalTime.Before(availableTrains[j].ArrivalTime)
 	})
@@ -268,7 +288,7 @@ func SortTrainsByArrival(availableTrains Trains) Trains {
 	return availableTrains
 }
 
-func SortTrainsByDeparture(availableTrains Trains) Trains {
+func sortTrainsByDeparture(availableTrains trains) trains {
 	sort.SliceStable(availableTrains, func(i, j int) bool {
 		return availableTrains[i].DepartureTime.Before(availableTrains[j].DepartureTime)
 	})
@@ -276,7 +296,7 @@ func SortTrainsByDeparture(availableTrains Trains) Trains {
 	return availableTrains
 }
 
-func PrintTrains(trains Trains) {
+func printTrains(trains trains) {
 	for _, v := range trains {
 		fmt.Printf("%v\n", v)
 	}
